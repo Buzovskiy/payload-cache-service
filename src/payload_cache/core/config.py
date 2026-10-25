@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,12 +9,11 @@ class Settings(BaseSettings):
 
     app_name: str = "Payload Cache Service"
     debug: bool = False
-    database_url: str = "sqlite:///./payload_cache.db"
+    database_url: str = "postgresql+psycopg://payload:payload@localhost:5433/payload_cache"
+    payload_directory: Path = Path("./data/payloads")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
 
