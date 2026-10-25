@@ -1,47 +1,51 @@
 # Payload Cache Service
 
-FastAPI payload caching microservice. **Stage 4:** transformation service with PostgreSQL-backed string caching. Payload generation and HTTP endpoints will follow in later stages.
+FastAPI microservice for generating and caching payloads. **Stage 5:** complete payload API, transformation cache and JSON file storage. CLI is planned next.
 
-## Reviewer quickstart
+## Quickstart (reviewers)
 
-Only Docker Engine with Compose (or Docker Desktop) is required. No `.env` needed when default ports are available:
+Requires Docker Compose only. Default host ports: API **8005**, PostgreSQL **5432**. No `.env` required if these ports are free.
 
 ```bash
 docker compose up --build -d
 curl http://127.0.0.1:8005/health
+curl -X POST http://127.0.0.1:8005/payload \
+  -H 'Content-Type: application/json' \
+  -d '{"list_1":["first","second"],"list_2":["other","another"]}'
 ```
 
-API docs: http://localhost:8005/docs. By default, the PostgreSQL host port is **5432** and the API host port is **8005**. If either port is already in use, create `.env` from `.env.example` and edit `DB_PORT` / `API_PORT`.
+The POST response contains an `id`. Retrieve the JSON result:
+
+```bash
+curl http://127.0.0.1:8005/payload/<id-from-post>
+```
+
+Example response: `{"output":"FIRST, OTHER, SECOND, ANOTHER"}`. The same input lists in the same order return the same ID. Swagger UI: http://localhost:8005/docs.
+
+If either host port is occupied, copy `.env.example` to `.env` and set `API_PORT` or `DB_PORT` (for example, `DB_PORT=5435`). Inside Compose, PostgreSQL is always reached at `db:5432`.
+
+## Persistence and migrations
+
+Compose starts `db`, applies committed migrations through the one-shot `migrate` container, then starts `api`. No migration files are generated automatically. `postgres_data` retains the PostgreSQL database and `payload_files` retains JSON files across container restarts. `docker compose down -v` **destroys both volumes and their data**.
+
+The `transformation_cache` table stores one transformed result per original string. The `payloads` table stores UUID, SHA-256 of canonical input JSON, and JSON filename. Files use UUID names and are written with an atomic replace. An input hash collision is assumed impractical; concurrent identical POST requests resolve to the existing record via `ON CONFLICT DO NOTHING`, with the losing request's temporary output removed. Concurrent cache misses can still invoke the transformer more than once.
+
+## Local development
+
+Install Python 3.12, uv and Docker Compose:
 
 ```bash
 cp .env.example .env
-# For example, change DB_PORT=5435 in .env
-docker compose up --build -d
-```
-
-Only **one** `compose.yaml` is needed. From within Docker, the API and Alembic always access the database at `db:5432`, regardless of the host's `DB_PORT`. Compose overrides `DB_HOST` and `DB_PORT` inside the app containers. PostgreSQL is only bound to the host loopback interface.
-
-Named volumes `postgres_data` and `payload_files` preserve the database and generated JSON files independently. `docker compose down` preserves them; `docker compose down -v` **deletes both volumes and all data**.
-
-`migrate` applies committed migrations using `alembic upgrade head` once PostgreSQL is healthy; `api` starts only after that command succeeds. Compose never generates migration files.
-
-## Local development and Alembic
-
-Install Python 3.12, uv and Docker Compose. For a machine where port 5432 is occupied:
-
-```bash
-cp .env.example .env
-# Set DB_PORT=5435 inside .env
+# Set DB_PORT=5435 here if required
 docker compose up -d db
-uv lock
 uv sync
 uv run alembic upgrade head
 uv run uvicorn payload_cache.main:app --app-dir src --reload --port 8005
 ```
 
-`Settings.database_url` is built automatically from `DB_HOST`, `DB_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`. **Do not set DATABASE_URL.** Changing DB_PORT in `.env` changes both the host port published by Compose and the connection used by local Alembic/FastAPI.
+`Settings.database_url` is derived from `DB_HOST`, `DB_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`.
 
-After changing SQLAlchemy models, generate and review new migrations locally:
+To create migration files after changing models (not necessary for stage 5):
 
 ```bash
 uv run alembic revision --autogenerate -m "describe change"
@@ -49,30 +53,16 @@ uv run alembic upgrade head
 uv run alembic check
 ```
 
-Commit each migration file alongside model changes. **The committed `uv.lock` still needs refreshing** for the stage 3 dependencies: run `uv lock` and commit its changes before final submission. Docker resolves dependencies independently until then.
-
-## Optional PostgreSQL integration test
-
-Against an already migrated **disposable development database** (the test writes and cleans up its own unique row):
-
-```bash
-RUN_DB_TESTS=1 uv run pytest tests/test_transformation_repository.py
-```
-
-## Quality checks
+## Tests and quality
 
 ```bash
 uv run pytest
+RUN_DB_TESTS=1 uv run pytest tests/test_transformation_repository.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src tests
 ```
 
-## Schema
+The PostgreSQL integration test requires an already migrated disposable development database. Additional API tests use in-memory repositories and a temporary directory.
 
-- `transformation_cache`: unique original string and its transformed result.
-- `payloads`: UUID, unique input hash, and unique JSON filename.
-
-The synchronous `TransformationService` deduplicates input strings, reads cached transformations in batches, invokes `str.upper()` only for missing strings, and stores new results via PostgreSQL `ON CONFLICT DO NOTHING`. A subsequent database read resolves concurrent insert conflicts. Concurrent requests may still call the transformer twice for a new key; strict single-flight coordination is intentionally out of scope. File writing, request hashing and payload endpoints are planned for subsequent stages.
-
-**Security:** development database credentials are examples only. Use strong secrets outside local development. PostgreSQL initialization credentials do not automatically update an existing persisted data volume.
+**Scope:** Simple synchronous implementation. Physical files were chosen to follow the "payload files" wording in the task. If a file is externally removed, GET returns HTTP 500. No background queue or strict single-flight transformer locking is introduced. The CLI is part of the next stage.
