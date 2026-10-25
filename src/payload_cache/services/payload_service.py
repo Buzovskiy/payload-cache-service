@@ -3,8 +3,8 @@ import json
 from collections.abc import Sequence
 from uuid import UUID, uuid4
 
-from payload_cache.repositories.payload_repository import PayloadRepository
-from payload_cache.services.transformation_service import TransformationService
+from payload_cache.repositories.protocol import PayloadRepositoryProtocol
+from payload_cache.services.protocol import TransformationServiceProtocol
 from payload_cache.storage.file_storage import PayloadFileStorage
 
 
@@ -28,8 +28,8 @@ def hash_request(list_1: Sequence[str], list_2: Sequence[str]) -> str:
 class PayloadService:
     def __init__(
         self,
-        repository: PayloadRepository,
-        transformation_service: TransformationService,
+        repository: PayloadRepositoryProtocol,
+        transformation_service: TransformationServiceProtocol,
         storage: PayloadFileStorage,
     ) -> None:
         self.repository = repository

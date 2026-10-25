@@ -50,10 +50,7 @@ def build_service(
 ) -> tuple[PayloadService, MemoryPayloadRepository, FakeTransformations]:
     repository = MemoryPayloadRepository()
     transformer = FakeTransformations()
-    # Replace implementations in this isolated unit test; no database is required.
-    service = PayloadService(  # type: ignore[arg-type]
-        repository, transformer, PayloadFileStorage(directory)
-    )
+    service = PayloadService(repository, transformer, PayloadFileStorage(directory))
     return service, repository, transformer
 
 
