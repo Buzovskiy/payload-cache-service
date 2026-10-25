@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -21,7 +22,7 @@ from payload_cache.storage.file_storage import PayloadFileStorage
 router = APIRouter(prefix="/payload", tags=["payload"])
 
 
-def get_payload_service(db: Session = Depends(get_db)) -> PayloadService:
+def get_payload_service(db: Annotated[Session, Depends(get_db)]) -> PayloadService:
     settings = get_settings()
     return PayloadService(
         repository=PayloadRepository(db),
@@ -33,7 +34,7 @@ def get_payload_service(db: Session = Depends(get_db)) -> PayloadService:
 @router.post("", response_model=PayloadCreated, status_code=status.HTTP_201_CREATED)
 def create_payload(
     request: PayloadRequest,
-    service: PayloadService = Depends(get_payload_service),
+    service: Annotated[PayloadService, Depends(get_payload_service)],
 ) -> PayloadCreated:
     return PayloadCreated(id=service.create(request.list_1, request.list_2))
 
@@ -41,7 +42,7 @@ def create_payload(
 @router.get("/{payload_id}", response_model=PayloadResponse)
 def read_payload(
     payload_id: UUID,
-    service: PayloadService = Depends(get_payload_service),
+    service: Annotated[PayloadService, Depends(get_payload_service)],
 ) -> PayloadResponse:
     try:
         return PayloadResponse(output=service.get(payload_id))
