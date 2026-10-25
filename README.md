@@ -1,6 +1,6 @@
 # Payload Cache Service
 
-FastAPI payload caching microservice. **Stage 3:** database schema, migrations, and Docker Compose deployment. Payload generation and caching endpoints will follow in later stages.
+FastAPI payload caching microservice. **Stage 4:** transformation service with PostgreSQL-backed string caching. Payload generation and HTTP endpoints will follow in later stages.
 
 ## Reviewer quickstart
 
@@ -51,6 +51,14 @@ uv run alembic check
 
 Commit each migration file alongside model changes. **The committed `uv.lock` still needs refreshing** for the stage 3 dependencies: run `uv lock` and commit its changes before final submission. Docker resolves dependencies independently until then.
 
+## Optional PostgreSQL integration test
+
+Against an already migrated **disposable development database** (the test writes and cleans up its own unique row):
+
+```bash
+RUN_DB_TESTS=1 uv run pytest tests/test_transformation_repository.py
+```
+
 ## Quality checks
 
 ```bash
@@ -65,6 +73,6 @@ uv run mypy src tests
 - `transformation_cache`: unique original string and its transformed result.
 - `payloads`: UUID, unique input hash, and unique JSON filename.
 
-File writing, hash calculation, transformer invocation and payload endpoints are planned for subsequent stages.
+The synchronous `TransformationService` deduplicates input strings, reads cached transformations in batches, invokes `str.upper()` only for missing strings, and stores new results via PostgreSQL `ON CONFLICT DO NOTHING`. A subsequent database read resolves concurrent insert conflicts. Concurrent requests may still call the transformer twice for a new key; strict single-flight coordination is intentionally out of scope. File writing, request hashing and payload endpoints are planned for subsequent stages.
 
 **Security:** development database credentials are examples only. Use strong secrets outside local development. PostgreSQL initialization credentials do not automatically update an existing persisted data volume.
