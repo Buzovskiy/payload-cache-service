@@ -3,7 +3,6 @@ from payload_cache.core.config import Settings
 
 def test_database_url_uses_individual_settings() -> None:
     settings = Settings(
-        _env_file=None,
         db_host="localhost",
         db_port=5435,
         postgres_user="payload",

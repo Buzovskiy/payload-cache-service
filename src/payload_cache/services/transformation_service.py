@@ -1,15 +1,13 @@
 from collections.abc import Callable, Sequence
 
-from payload_cache.repositories.transformation_repository import (
-    TransformationRepository,
-)
+from payload_cache.repositories.protocol import TransformationRepositoryProtocol
 from payload_cache.services.transformer import transform
 
 
 class TransformationService:
     def __init__(
         self,
-        repository: TransformationRepository,
+        repository: TransformationRepositoryProtocol,
         transformer: Callable[[str], str] = transform,
     ) -> None:
         self.repository = repository
