@@ -46,9 +46,7 @@ class PayloadService:
             return existing.id
 
         interleaved = [
-            value
-            for pair in zip(list_1, list_2, strict=True)
-            for value in pair
+            value for pair in zip(list_1, list_2, strict=True) for value in pair
         ]
         transformed = self.transformation_service.transform_many(interleaved)
         output = ", ".join(transformed)

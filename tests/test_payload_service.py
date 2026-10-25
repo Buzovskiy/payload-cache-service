@@ -71,9 +71,7 @@ def test_roundtrip_and_identical_request_reuses_id(tmp_path: Path) -> None:
 
 def test_hash_preserves_order_and_list_identity() -> None:
     assert hash_request(["a"], ["b"]) != hash_request(["b"], ["a"])
-    assert hash_request(["a", "b"], ["c", "d"]) != hash_request(
-        ["b", "a"], ["c", "d"]
-    )
+    assert hash_request(["a", "b"], ["c", "d"]) != hash_request(["b", "a"], ["c", "d"])
 
 
 def test_empty_lists(tmp_path: Path) -> None:

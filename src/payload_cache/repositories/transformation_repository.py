@@ -33,8 +33,6 @@ class TransformationRepository:
             ]
         )
         self.session.execute(
-            statement.on_conflict_do_nothing(
-                constraint="uq_transform_original"
-            )
+            statement.on_conflict_do_nothing(constraint="uq_transform_original")
         )
         self.session.commit()

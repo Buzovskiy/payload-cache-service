@@ -22,9 +22,12 @@ def test_payload_endpoints_and_validation(tmp_path: Path) -> None:
         output = client.get(f"/payload/{payload_id}")
         assert output.status_code == 200
         assert output.json() == {"output": "FIRST, OTHER, SECOND, ANOTHER"}
-        assert client.post(
-            "/payload", json={"list_1": ["first"], "list_2": []}
-        ).status_code == 422
+        assert (
+            client.post(
+                "/payload", json={"list_1": ["first"], "list_2": []}
+            ).status_code
+            == 422
+        )
         assert client.get(f"/payload/{UUID(int=0)}").status_code == 404
         assert client.get("/payload/not-a-uuid").status_code == 422
 

@@ -35,8 +35,10 @@ class PayloadRepository:
             self.session.rollback()
             raise
 
-        record = self.get_by_id(inserted_id) if inserted_id else self.get_by_hash(
-            request_hash
+        record = (
+            self.get_by_id(inserted_id)
+            if inserted_id
+            else self.get_by_hash(request_hash)
         )
         if record is None:
             raise RuntimeError("Payload record disappeared after insert")

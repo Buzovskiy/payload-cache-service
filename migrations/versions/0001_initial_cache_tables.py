@@ -19,8 +19,10 @@ def upgrade() -> None:
         sa.Column("original_text", sa.Text(), nullable=False),
         sa.Column("transformed_text", sa.Text(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True),
-            server_default=sa.func.now(), nullable=False,
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
         ),
         sa.UniqueConstraint("original_text", name="uq_transform_original"),
     )
@@ -30,8 +32,10 @@ def upgrade() -> None:
         sa.Column("request_hash", sa.String(length=64), nullable=False, unique=True),
         sa.Column("filename", sa.String(length=255), nullable=False, unique=True),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True),
-            server_default=sa.func.now(), nullable=False,
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
         ),
     )
 
