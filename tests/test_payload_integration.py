@@ -2,6 +2,7 @@
 
 import json
 import os
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -40,7 +41,7 @@ def test_payload_roundtrip_with_postgres(tmp_path: Path, concurrent: bool) -> No
     request_hash = hash_request(left, right)
     app = create_app()
 
-    def test_service():
+    def test_service() -> Iterator[PayloadService]:
         # Session scope matches the request; files stay isolated in tmp_path.
         with Session(engine) as session:
             yield PayloadService(
