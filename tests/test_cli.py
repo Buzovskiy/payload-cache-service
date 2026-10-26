@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import httpx
@@ -13,9 +14,7 @@ def parse_cli_args(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> CLISetti
     return CLISettings()
 
 
-def test_cli_repeat_and_output(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_cli_repeat_and_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -87,4 +86,4 @@ def test_cli_validates_options_and_payload(monkeypatch: pytest.MonkeyPatch) -> N
     with pytest.raises(ValidationError):
         parse_cli_args(monkeypatch, [])
     with pytest.raises(ValidationError):
-        run(CLISettings(_cli_parse_args=["-j", '{"list_1":["hello"],"list_2":[]}']))
+        run(parse_cli_args(monkeypatch, ["-j", '{"list_1":["hello"],"list_2":[]}']))
