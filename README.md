@@ -86,6 +86,10 @@ uv run ruff format --check .
 uv run mypy src tests
 ```
 
-PostgreSQL integration tests are opt-in and require a migrated development database.\nThey use unique request data and remove their own database rows; payload files live\nonly in pytest temporary directories. Tests cover repeated and concurrent POSTs,\nGET, persisted transformations, and JSON files. Other API tests use in-memory\nrepositories; CLI tests use an HTTPX mock transport.
+PostgreSQL integration tests are opt-in and require a migrated development database. 
+They use unique request data and remove their own database rows; payload files live 
+only in pytest temporary directories. Tests cover repeated and concurrent POSTs, 
+GET, persisted transformations, and JSON files. Other API tests use in-memory 
+repositories; CLI tests use an HTTPX mock transport.
 
 **Scope:** Simple synchronous implementation. Physical files were chosen to follow the "payload files" wording in the task. If a file is externally removed, GET returns HTTP 500. No background queue or strict single-flight transformer locking is introduced. The CLI runs locally against the containerized API.
