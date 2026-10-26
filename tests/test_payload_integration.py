@@ -79,15 +79,18 @@ def test_payload_roundtrip_with_postgres(tmp_path: Path, concurrent: bool) -> No
             assert response.json() == {"output": expected}
 
             with Session(engine) as session:
-                assert session.scalar(
-                    select(func.count()).select_from(Payload).where(
-                        Payload.request_hash == request_hash
+                assert (
+                    session.scalar(
+                        select(func.count())
+                        .select_from(Payload)
+                        .where(Payload.request_hash == request_hash)
                     )
-                ) == 1
+                    == 1
+                )
                 assert session.scalar(
-                    select(func.count()).select_from(TransformationCache).where(
-                        TransformationCache.original_text.in_(values)
-                    )
+                    select(func.count())
+                    .select_from(TransformationCache)
+                    .where(TransformationCache.original_text.in_(values))
                 ) == len(values)
 
             files = list(tmp_path.glob("*.json"))

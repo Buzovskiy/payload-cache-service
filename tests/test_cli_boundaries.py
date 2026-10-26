@@ -10,9 +10,13 @@ import pytest
 from payload_cache.cli import CLISettings, main, run
 
 
-def test_cli_stdin(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_stdin(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(sys, "argv", ["cache-cli", "--input", "-"])
-    monkeypatch.setattr(sys, "stdin", io.StringIO('{"list_1":["one"],"list_2":["two"]}'))
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO('{"list_1":["one"],"list_2":["two"]}')
+    )
     settings = CLISettings()
 
     def handler(request: httpx.Request) -> httpx.Response:
