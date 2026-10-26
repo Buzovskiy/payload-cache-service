@@ -1,3 +1,16 @@
 ### Health check
 GET http://127.0.0.1:8005/health
 Accept: application/json
+
+### Create or reuse a payload
+POST http://127.0.0.1:8005/payload
+Content-Type: application/json
+
+{
+  "list_1": ["first string", "second string", "third string"],
+  "list_2": ["other string", "another string", "last string"]
+}
+
+### Read payload: replace UUID with the id returned above
+GET http://127.0.0.1:8005/payload/00000000-0000-0000-0000-000000000000
+Accept: application/json

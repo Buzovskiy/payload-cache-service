@@ -4,7 +4,7 @@ FastAPI microservice for generating and caching payloads. Includes the payload A
 
 ## Quickstart (reviewers)
 
-Requires Docker Compose only. Default host ports: API **8005**, PostgreSQL **5432**. No `.env` required if these ports are free.
+The API requires Docker Compose; the optional local CLI requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Default host ports: API **8005**, PostgreSQL **5432**. No `.env` required if these ports are free.
 
 ```bash
 docker compose up --build -d
@@ -26,7 +26,7 @@ If either host port is occupied, copy `.env.example` to `.env` and set `API_PORT
 
 ## CLI client
 
-Use `uv sync` to install the CLI and `docker compose up --build -d` to start the API.
+Use `uv sync` to install the CLI locally and `docker compose up --build -d` to start the API. The production Docker image runs the API only; the CLI is a separate HTTP client.
 The CLI submits POST then GET on each iteration. For a single iteration it emits
 a JSON object with `id` and `output`; for repeated calls it emits a JSON array.
 
@@ -68,7 +68,7 @@ uv run uvicorn payload_cache.main:app --app-dir src --reload --port 8005
 
 `Settings.database_url` is derived from `DB_HOST`, `DB_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`.
 
-To create migration files after changing models (not necessary for stage 5):
+To create migration files after changing models:
 
 ```bash
 uv run alembic revision --autogenerate -m "describe change"
@@ -79,17 +79,55 @@ uv run alembic check
 ## Tests and quality
 
 ```bash
-uv run pytest
-RUN_DB_TESTS=1 uv run pytest tests/test_transformation_repository.py tests/test_payload_integration.py
+uv run pytest  # Fast unit/API/CLI tests (database tests skipped)
+RUN_DB_TESTS=1 uv run pytest  # All tests, including real PostgreSQL
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src tests
 ```
 
-PostgreSQL integration tests are opt-in and require a migrated development database. 
-They use unique request data and remove their own database rows; payload files live 
-only in pytest temporary directories. Tests cover repeated and concurrent POSTs, 
-GET, persisted transformations, and JSON files. Other API tests use in-memory 
+PostgreSQL integration tests are opt-in and require a migrated development database.
+They use unique request data and remove their own database rows; payload files live
+only in pytest temporary directories. Tests cover repeated and concurrent POSTs,
+GET, persisted transformations, and JSON files. Other API tests use in-memory
 repositories; CLI tests use an HTTPX mock transport.
 
 **Scope:** Simple synchronous implementation. Physical files were chosen to follow the "payload files" wording in the task. If a file is externally removed, GET returns HTTP 500. No background queue or strict single-flight transformer locking is introduced. The CLI runs locally against the containerized API.
+
+
+## Architecture and request lifecycle
+
+1. FastAPI validates two equally long string lists using `PayloadRequest`.
+2. `PayloadService` hashes a deterministic JSON representation of both lists and
+   looks for an existing `payloads` row. A cache hit immediately returns its UUID.
+3. On a miss, the service interleaves the lists and asks `TransformationService`
+   to batch-read cached strings. Missing distinct strings are uppercased and stored
+   in PostgreSQL (`transformation_cache`).
+4. The result is written as a UUID-named JSON file and `PayloadRepository` stores
+   metadata in PostgreSQL. A unique hash constraint resolves duplicate requests.
+5. GET finds the filename by UUID and reads the physical JSON file.
+
+The API uses synchronous SQLAlchemy sessions scoped to each request and a separate
+named Docker volume for persisted JSON files. Logs report payload cache HIT/MISS
+and transformation cache counts without recording input strings. Keep in mind that
+PostgreSQL commits and filesystem writes are not one atomic transaction; an abrupt
+process termination may leave an orphan file. Concurrent cache misses can perform
+redundant transformations, although duplicate payload records are prevented.
+
+Inspect output and logs:
+
+```bash
+docker compose logs -f api
+docker compose exec api ls -lah /data/payloads/
+```
+
+## Submission checklist
+
+- Publish this repository with full, unsquashed commit history.
+- Verify Docker Compose and both HTTP endpoints with sample data.
+- Run Ruff, mypy, unit tests and opt-in PostgreSQL integration tests.
+- Record an English code walkthrough (camera on, screen shared, up to 15 minutes):
+  explain the endpoint-to-database-and-back flow, demonstrate CLI and tests,
+  and justify the architecture and trade-offs.
+- Email the public repository URL and Loom/unlisted YouTube URL, and report the
+  actual number of hours spent on the assignment.
