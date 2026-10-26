@@ -1,11 +1,15 @@
 import hashlib
 import json
+import logging
 from collections.abc import Sequence
 from uuid import UUID, uuid4
 
 from payload_cache.repositories.protocol import PayloadRepositoryProtocol
 from payload_cache.services.protocol import TransformationServiceProtocol
 from payload_cache.storage.file_storage import PayloadFileStorage
+
+
+logger = logging.getLogger(__name__)
 
 
 class PayloadNotFoundError(Exception):
@@ -43,7 +47,10 @@ class PayloadService:
         request_hash = hash_request(list_1, list_2)
         existing = self.repository.get_by_hash(request_hash)
         if existing is not None:
+            logger.info("Payload cache HIT: id=%s", existing.id)
             return existing.id
+
+        logger.info("Payload cache MISS: generating payload")
 
         interleaved = [
             value for pair in zip(list_1, list_2, strict=True) for value in pair
@@ -59,12 +66,16 @@ class PayloadService:
                 payload_id, request_hash, filename
             )
         except Exception:
+            logger.exception("Payload metadata persistence failed: id=%s", payload_id)
             self.storage.delete(filename)
             raise
 
         if not created:
             # A concurrent request inserted the same hash first.
             self.storage.delete(filename)
+            logger.info("Payload creation conflict: reusing id=%s", record.id)
+        else:
+            logger.info("Payload created: id=%s", record.id)
         return record.id
 
     def get(self, payload_id: UUID) -> str:
