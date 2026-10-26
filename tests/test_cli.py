@@ -1,5 +1,4 @@
 import json
-import sys
 from pathlib import Path
 
 import httpx
@@ -88,6 +87,4 @@ def test_cli_validates_options_and_payload(monkeypatch: pytest.MonkeyPatch) -> N
     with pytest.raises(ValidationError):
         parse_cli_args(monkeypatch, [])
     with pytest.raises(ValidationError):
-        run(
-            parse_cli_args(monkeypatch, ["-j", '{"list_1":["hello"],"list_2":[]}'])
-        )
+        run(CLISettings(_cli_parse_args=["-j", '{"list_1":["hello"],"list_2":[]}']))

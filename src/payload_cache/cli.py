@@ -27,9 +27,7 @@ class CLISettings(BaseSettings):
     json_input: str | None = Field(
         default=None, validation_alias=AliasChoices("json", "j")
     )
-    output_file: str = Field(
-        default="-", validation_alias=AliasChoices("output", "o")
-    )
+    output_file: str = Field(default="-", validation_alias=AliasChoices("output", "o"))
 
     @model_validator(mode="after")
     def validate_input_source(self) -> "CLISettings":
