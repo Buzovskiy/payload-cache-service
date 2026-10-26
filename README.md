@@ -1,6 +1,6 @@
 # Payload Cache Service
 
-FastAPI microservice for generating and caching payloads. **Stage 5:** complete payload API, transformation cache and JSON file storage. CLI is planned next.
+FastAPI microservice for generating and caching payloads. Includes the payload API, transformation cache, JSON file storage and a CLI client.
 
 ## Quickstart (reviewers)
 
@@ -23,6 +23,29 @@ curl http://127.0.0.1:8005/payload/<id-from-post>
 Example response: `{"output":"FIRST, OTHER, SECOND, ANOTHER"}`. The same input lists in the same order return the same ID. Swagger UI: http://localhost:8005/docs.
 
 If either host port is occupied, copy `.env.example` to `.env` and set `API_PORT` or `DB_PORT` (for example, `DB_PORT=5435`). Inside Compose, PostgreSQL is always reached at `db:5432`.
+
+## CLI client
+
+Use `uv sync` to install the CLI and `docker compose up --build -d` to start the API.
+The CLI submits POST then GET on each iteration. For a single iteration it emits
+a JSON object with `id` and `output`; for repeated calls it emits a JSON array.
+
+```bash
+uv run cache-cli -j '{"list_1":["hello"],"list_2":["world"]}'
+uv run cache-cli -r 3 -i request.json -o result.json
+cat request.json | uv run cache-cli --input - --output -
+uv run cache-cli --host http://127.0.0.1:8005 --json '{"list_1":[],"list_2":[]}'
+uv run cache-cli --help
+```
+
+Flags: `--host` defaults to http://127.0.0.1:8005;
+`-r/--repeat` is a positive integer (default 1);
+`-i/--input` accepts a file or `-` for stdin;
+`-j/--json` accepts inline JSON;
+`-o/--output` accepts a file or `-` for stdout (default).
+Specify exactly one input source. Invalid input or HTTP errors exit nonzero,
+with diagnostics on stderr. The task's `-h` alias is ambiguous; it is reserved
+for `--help`, while the host uses `--host`.
 
 ## Persistence and migrations
 
@@ -65,4 +88,4 @@ uv run mypy src tests
 
 The PostgreSQL integration test requires an already migrated disposable development database. Additional API tests use in-memory repositories and a temporary directory.
 
-**Scope:** Simple synchronous implementation. Physical files were chosen to follow the "payload files" wording in the task. If a file is externally removed, GET returns HTTP 500. No background queue or strict single-flight transformer locking is introduced. The CLI is part of the next stage.
+**Scope:** Simple synchronous implementation. Physical files were chosen to follow the "payload files" wording in the task. If a file is externally removed, GET returns HTTP 500. No background queue or strict single-flight transformer locking is introduced. The CLI runs locally against the containerized API.
