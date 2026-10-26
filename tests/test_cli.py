@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import httpx
@@ -8,7 +9,14 @@ from pydantic import ValidationError
 from payload_cache.cli import CLISettings, run
 
 
-def test_cli_repeat_and_output(tmp_path: Path) -> None:
+def parse_cli_args(monkeypatch: pytest.MonkeyPatch, args: list[str]) -> CLISettings:
+    monkeypatch.setattr(sys, "argv", ["cache-cli", *args])
+    return CLISettings()
+
+
+def test_cli_repeat_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -16,7 +24,8 @@ def test_cli_repeat_and_output(tmp_path: Path) -> None:
         if request.method == "POST":
             assert request.url.path == "/payload"
             assert json.loads(request.content) == {
-                "list_1": ["hello"], "list_2": ["world"]
+                "list_1": ["hello"],
+                "list_2": ["world"],
             }
             return httpx.Response(
                 201, json={"id": "550e8400-e29b-41d4-a716-446655440000"}
@@ -25,10 +34,19 @@ def test_cli_repeat_and_output(tmp_path: Path) -> None:
         return httpx.Response(200, json={"output": "HELLO, WORLD"})
 
     output = tmp_path / "output.json"
-    settings = CLISettings(_cli_parse_args=[
-        "--host", "http://testserver", "-r", "3", "-j",
-        '{"list_1":["hello"],"list_2":["world"]}', "-o", str(output)
-    ])
+    settings = parse_cli_args(
+        monkeypatch,
+        [
+            "--host",
+            "http://testserver",
+            "-r",
+            "3",
+            "-j",
+            '{"list_1":["hello"],"list_2":["world"]}',
+            "-o",
+            str(output),
+        ],
+    )
     with httpx.Client(
         transport=httpx.MockTransport(handler), base_url="http://testserver"
     ) as client:
@@ -40,11 +58,13 @@ def test_cli_repeat_and_output(tmp_path: Path) -> None:
 
 
 def test_cli_reads_file_and_stdout(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = tmp_path / "input.json"
     source.write_text('{"list_1":[],"list_2":[]}', encoding="utf-8")
-    settings = CLISettings(_cli_parse_args=["-i", str(source)])
+    settings = parse_cli_args(monkeypatch, ["-i", str(source)])
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "POST":
@@ -60,14 +80,14 @@ def test_cli_reads_file_and_stdout(
     assert json.loads(capsys.readouterr().out)["output"] == ""
 
 
-def test_cli_validates_options_and_payload() -> None:
+def test_cli_validates_options_and_payload(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ValidationError):
-        CLISettings(_cli_parse_args=["-r", "0", "-j", "{}"])
+        parse_cli_args(monkeypatch, ["-r", "0", "-j", "{}"])
     with pytest.raises(ValidationError):
-        CLISettings(_cli_parse_args=["-j", "{}", "-i", "file.json"])
+        parse_cli_args(monkeypatch, ["-j", "{}", "-i", "file.json"])
     with pytest.raises(ValidationError):
-        CLISettings(_cli_parse_args=[])
+        parse_cli_args(monkeypatch, [])
     with pytest.raises(ValidationError):
-        run(CLISettings(_cli_parse_args=[
-            "-j", '{"list_1":["hello"],"list_2":[]}'
-        ]))
+        run(
+            parse_cli_args(monkeypatch, ["-j", '{"list_1":["hello"],"list_2":[]}'])
+        )
