@@ -8,7 +8,6 @@ from payload_cache.repositories.protocol import PayloadRepositoryProtocol
 from payload_cache.services.protocol import TransformationServiceProtocol
 from payload_cache.storage.file_storage import PayloadFileStorage
 
-
 logger = logging.getLogger(__name__)
 
 

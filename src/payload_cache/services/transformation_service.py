@@ -4,7 +4,6 @@ from collections.abc import Callable, Sequence
 from payload_cache.repositories.protocol import TransformationRepositoryProtocol
 from payload_cache.services.transformer import transform
 
-
 logger = logging.getLogger(__name__)
 
 
